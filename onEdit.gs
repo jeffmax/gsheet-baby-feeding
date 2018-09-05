@@ -17,6 +17,23 @@ function indexOfMin(arr) {
     return minIndex;
 }
 
+function rowsMatchingDayFromRow(matchingDay, row){
+   var nextDate = new Date(matchingDay.toLocaleDateString());
+   nextDate.setDate(priorDate.getDate()+1);
+   var dates = babySheet.getRange("G"+row+":G").getValues();
+   var rows = [];
+   for (var i = 0; i < dates.length; i++){
+      var iDate = dates[i][0];
+      if (iDate < matchingDay){
+         break;
+      }
+      if (iDate < nextDate){
+        rows.push(i+row);
+      }
+   }
+   return rows;
+}
+
 function pad(n){return (n<10?'0':'')+n};
 
 function dateToTimeString(d){
@@ -33,7 +50,7 @@ function onEdit(e) {
   // Only one execution of this function at once
   var lock = LockService.getDocumentLock();
   lock.waitLock(10000);
-  
+  var inserted_time = false;
   var EDIT_ROW = 2;
   var PREV_ROW = 3;
   var BREAST_COL = 2;
@@ -51,6 +68,7 @@ function onEdit(e) {
   
   var instructions = "ENTER -->";
   var currentCell = e.source.getActiveSelection();
+  var currentCellCol = currentCell.getColumn();
   var currentCellRow = currentCell.getRow();
   var babySheet = e.source.getActiveSheet();
   var startTime = babySheet.getRange(currentCellRow, START_COL);
@@ -76,56 +94,54 @@ function onEdit(e) {
   
   // Did they just edit the top row for the first time? 
   // If a row has been inserted manually, rangeWidth will be greater than one
-  if (currentCellRow==EDIT_ROW && e.range.getWidth() == 1 & (startTime.getValue() == "" || startTime.getValue() == instructions)){
+  if (currentCellRow==EDIT_ROW && e.range.getWidth() == 1 & (startTime.getDisplayValue() == "" || startTime.getDisplayValue() == instructions)){
       startTime.setValue(dateToTimeString(d));
+      inserted_time = true;
       lastDate = babySheet.getRange(PREV_ROW, DAY_COL).getValue();
       if (lastDate.toLocaleDateString() != d.toLocaleDateString()){
         // Add a border to the top of the last row to show that it was yeterday
         var yesterdayRow = babySheet.getRange(PREV_ROW,1,1, babySheet.getLastColumn());
         yesterdayRow.setBorder(true, false, false, false, false, false, "black", SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
       }
-      // Set the note on this row's total to show what the closest feeding to yesterday's total was.
-      // Create date objects with midnigh time
-      var today = new Date(d.toLocaleDateString());
-      var yesterday = new Date(d.toLocaleDateString());
-      yesterday.setDate(d.getDate() - 1);
-      // Locate all rows for yesterday's date
-      var dates = babySheet.getRange("G2:G").getValues();
-      var yesterdayRows = [];
-      for (var i = 0; i < dates.length; i++){
-         var iDate = dates[i][0];
-         if (iDate < yesterday){
-            break;
-         }
-         if (iDate < today){
-          yesterdayRows.push(i+2);
-         }
-      }
-      if (yesterdayRows.length > 0){
-        // Go through all yesterday's feeding times and compare to today's time
-        var thisTimeYesterday = new Date(d);
-        thisTimeYesterday.setDate(d.getDate()-1);
-        var times = babySheet.getRange("A"+yesterdayRows[0]+":A"+yesterdayRows[yesterdayRows.length-1]).getValues();
-        var offsets=[];
-        for (var i=0; i<times.length;i++){
-           var iDate = new Date(dateToTimeString(times[i][0]) +" " + yesterday.toLocaleDateString());
-           offsets.push(Math.abs(thisTimeYesterday.getTime() - iDate.getTime()));
-        }
-        
-        // Find the closest time yesterday to the current feeding time
-        var index = indexOfMin(offsets);
-        if (index != -1){
-          if (offsets[index] < 7200000){ // If not within two hours, don't bother 
-            var closestTotalYesterday = babySheet.getRange(yesterdayRows[index], TOTAL_COL).getDisplayValue();
-            var closestTimeYesterday = dateToTimeString(times[index][0]);
-            // Set the note
-            babySheet.getRange(EDIT_ROW, TOTAL_COL).setNote("At the closest time yesterday ("+closestTimeYesterday+"), the total feed was "+ closestTotalYesterday + " oz");
-          }
-        }
-      }
   }else if (currentCellRow==EDIT_ROW && e.range.getWidth() > 1 & startTime.getValue() == ""){
       // If a row was inserted manually at the top, set instructions, eitherwise leave it blank
       startTime.setValue(instructions);
+  }
+  
+  // Go through all prior days feeding times and compare edited times time
+  if (inserted_time || (currentCellCol == START_COL && e.oldValue != e.value)){ 
+    var timeToMatch = new Date(startTime.getValue());
+    // If there is actually a date in here, continue
+    if (timeToMatch instanceof Date && !isNaN(timeToMatch)){
+        var priorDay = new Date(startTime.getValue().toLocaleDateString());
+        priorDay.setDate(thisTimeYesterday.getDate()-1);  
+        var priorDaysRows = rowsMatchingDayFromRow(priorDay, currentCellRow);
+        var times = babySheet.getRange("A"+yesterdayRows[0]+":A"+yesterdayRows[yesterdayRows.length-1]).getValues();
+        var offsets=[];
+        for (var i=0; i<times.length;i++){
+           offsets.push(Math.abs(timeToMatch.getTime() - times[i][0].getTime()));
+        }
+    
+        // Find the closest time yesterday to the current feeding time
+        var index = indexOfMin(offsets);
+        if (index != -1){
+           if (offsets[index] < 7200000){ // If not within two hours, don't bother 
+               var closestTotalYesterday = babySheet.getRange(priorDayRows[index], TOTAL_COL).getDisplayValue();
+               var closestTimeYesterday = dateToTimeString(times[index][0]);
+               // Set the note
+               babySheet.getRange(currentCellRow, TOTAL_COL).setNote("At the closest time yesterday ("+closestTimeYesterday+"), the total feed was "+ closestTotalYesterday + " oz");
+           }else{
+              // No valid match was found, if prior note there, clear it
+              babySheet.getRange(currentCellRow, TOTAL_COL).clearNote();
+           }
+         }else{
+            // No dates were found, if note exists, clear it
+            babySheet.getRange(currentCellRow, TOTAL_COL).clearNote();
+         }
+      }else{
+          // Date is invalid, clear out any existing note
+          babySheet.getRange(currentCellRow, TOTAL_COL).clearNote();
+      }
   }
   
   // Did they just hit done on the top row?
@@ -137,7 +153,6 @@ function onEdit(e) {
   if (currentCellRow==EDIT_ROW && done.getValue() == true && (breast != "" || formula != "") && timestamp != "" && timestamp != instructions){
     endDateTime.setValue(d.toLocaleString());
     babySheet.getRange(EDIT_ROW, TOTAL_COL).setFontWeight("bold");
-    //babySheet.getRange(EDIT_ROW, TOTAL_COL).clearNote();
     lastDate = babySheet.getRange(PREV_ROW, DAY_COL).getValue();
     if (lastDate.toLocaleDateString() != d.toLocaleDateString()){
       babySheet.getRange(PREV_ROW, TOTAL_COL).setFontWeight("bold");
@@ -147,7 +162,7 @@ function onEdit(e) {
     babySheet.getRange(EDIT_ROW,1,1, babySheet.getLastColumn()).setBackground(DISABLED_ROW_COLOR);
     babySheet.insertRowBefore(EDIT_ROW);
     babySheet.getRange(EDIT_ROW, START_COL).setValue(instructions);
-    babySheet.getRange(EDIT_ROW,1,1, babySheet.getLastColumn()).setBackground("white");
+    babySheet.getRange(EDIT_ROW,1,1,babySheet.getLastColumn()).setBackground("white");
     babySheet.getRange(EDIT_ROW, TOTAL_COL).setFontWeight("normal")
   }else if (currentCellRow==EDIT_ROW && done.getValue() == true){
     done.setValue(false);
