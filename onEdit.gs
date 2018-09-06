@@ -75,6 +75,8 @@ function onEdit(e) {
   var endDateTime = babySheet.getRange(currentCellRow, END_COL);
   var runningTotal = babySheet.getRange(currentCellRow, TOTAL_COL);
   var rowTotal = babySheet.getRange(currentCellRow, ROW_TOTAL_COL);
+  var rowDay = babySheet.getRange(currentCellRow, DAY_COL);
+  
   // Set the formula that calculates the running total, this will work when someone manually inserts row
   if (runningTotal.getValue()==""){
     runningTotal.setValue("=SUMIF(INDIRECT(\"G\"&ROW()&\":G\"),INDIRECT(\"G\"&ROW()),INDIRECT(\"INTERNAL!A\"&ROW()&\":A\"))")
@@ -110,16 +112,16 @@ function onEdit(e) {
   
   // Go through all prior days feeding times and compare edited times time
   if (inserted_time || (currentCellCol == START_COL && e.oldValue != e.value)){ 
-    var timeToMatch = new Date(startTime.getValue());
+    var priorDay = new Date(startTime.getDisplayValue() + " " + rowDay.getDisplayValue());
     // If there is actually a date in here, continue
-    if (timeToMatch instanceof Date && !isNaN(timeToMatch)){
-        var priorDay = new Date(startTime.getValue().toLocaleDateString());
-        priorDay.setDate(thisTimeYesterday.getDate()-1);  
+    if (priorDay instanceof Date && !isNaN(priorDay)){
+        priorDay.setDate(priorDay.getDate()-1);  
         var priorDaysRows = rowsMatchingDayFromRow(priorDay, currentCellRow);
-        var times = babySheet.getRange("A"+yesterdayRows[0]+":A"+yesterdayRows[yesterdayRows.length-1]).getValues();
+        var times = babySheet.getRange("A"+priorDaysRows[0]+":A"+priorDaysRows[priorDaysRows.length-1]).getValues();
         var offsets=[];
         for (var i=0; i<times.length;i++){
-           offsets.push(Math.abs(timeToMatch.getTime() - times[i][0].getTime()));
+           var iDate = new Date(dateToTimeString(times[i][0]) + " " + priorDay.toLocaleDateString());
+           offsets.push(Math.abs(timeToMatch.getTime() - iDate.getTime()));
         }
     
         // Find the closest time yesterday to the current feeding time
