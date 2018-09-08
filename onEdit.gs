@@ -1,3 +1,18 @@
+var EDIT_ROW = 2;
+var PREV_ROW = 3;
+var BREAST_COL = 2;
+var FORMULA_COL = 3;
+var START_COL = 1;
+var DONE_COL = 5;
+var TOTAL_COL = 6;
+var NOTES_COL = 7;
+var DAY_COL = 8;
+var END_COL = 12;
+var DAY_COL_LETTER='H';
+var DISABLED_ROW_COLOR = "#D3D3D3";
+
+
+
 // From https://stackoverflow.com/questions/11301438/return-index-of-greatest-value-in-an-array
 function indexOfMin(arr) {
     if (arr.length === 0) {
@@ -21,7 +36,7 @@ function rowsMatchingDayFromRow(matchingDay, row, babySheet){
    row = row+1;
    var nextDate = new Date(matchingDay.toLocaleDateString());
    nextDate.setDate(nextDate.getDate()+1);
-   var dates = babySheet.getRange("G"+row+":G").getValues();
+   var dates = babySheet.getRange(DAY_COL_LETTER+row+":"+DAY_COL_LETTER).getValues();
    var rows = [];
    for (var i = 0; i < dates.length; i++){
       var iDate = dates[i][0];
@@ -52,18 +67,7 @@ function onEdit(e) {
   var lock = LockService.getDocumentLock();
   lock.waitLock(10000);
   var inserted_time = false;
-  var EDIT_ROW = 2;
-  var PREV_ROW = 3;
-  var BREAST_COL = 2;
-  var FORMULA_COL = 3;
-  var START_COL = 1;
-  var DONE_COL = 4;
-  var TOTAL_COL = 5;
-  var NOTES_COL = 6;
-  var DAY_COL = 7;
-  var END_COL = 10;
-  var ROW_TOTAL_COL=11;
-  var DISABLED_ROW_COLOR = "#D3D3D3";
+ 
   var d = new Date();
   var lastDate;
   
@@ -75,12 +79,11 @@ function onEdit(e) {
   var startTime = babySheet.getRange(currentCellRow, START_COL);
   var endDateTime = babySheet.getRange(currentCellRow, END_COL);
   var runningTotal = babySheet.getRange(currentCellRow, TOTAL_COL);
-  var rowTotal = babySheet.getRange(currentCellRow, ROW_TOTAL_COL);
   var rowDay = babySheet.getRange(currentCellRow, DAY_COL);
   
   // Set the formula that calculates the running total, this will work when someone manually inserts row
   if (runningTotal.getValue()==""){
-    runningTotal.setValue("=SUMIF(INDIRECT(\"G\"&ROW()&\":G\"),INDIRECT(\"G\"&ROW()),INDIRECT(\"INTERNAL!A\"&ROW()&\":A\"))")
+    runningTotal.setValue("=SUMIF(INDIRECT(\""+DAY_COL_LETTER+"\"&ROW()&\":"+DAY_COL_LETTER+"\"),INDIRECT(\""+DAY_COL_LETTER+"\"&ROW()),INDIRECT(\"INTERNAL!A\"&ROW()&\":A\"))")
   }
  
   // Populate the date (handles editing the top row and when someone manually inserts a row)
