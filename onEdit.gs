@@ -17,9 +17,10 @@ function indexOfMin(arr) {
     return minIndex;
 }
 
-function rowsMatchingDayFromRow(matchingDay, row){
+function rowsMatchingDayFromRow(matchingDay, row, babySheet){
+   row = row+1;
    var nextDate = new Date(matchingDay.toLocaleDateString());
-   nextDate.setDate(priorDate.getDate()+1);
+   nextDate.setDate(nextDate.getDate()+1);
    var dates = babySheet.getRange("G"+row+":G").getValues();
    var rows = [];
    for (var i = 0; i < dates.length; i++){
@@ -116,34 +117,36 @@ function onEdit(e) {
     // If there is actually a date in here, continue
     if (priorDay instanceof Date && !isNaN(priorDay)){
         priorDay.setDate(priorDay.getDate()-1);  
-        var priorDaysRows = rowsMatchingDayFromRow(priorDay, currentCellRow);
-        var times = babySheet.getRange("A"+priorDaysRows[0]+":A"+priorDaysRows[priorDaysRows.length-1]).getValues();
-        var offsets=[];
-        for (var i=0; i<times.length;i++){
-           var iDate = new Date(dateToTimeString(times[i][0]) + " " + priorDay.toLocaleDateString());
-           offsets.push(Math.abs(timeToMatch.getTime() - iDate.getTime()));
-        }
-    
-        // Find the closest time yesterday to the current feeding time
-        var index = indexOfMin(offsets);
-        if (index != -1){
-           if (offsets[index] < 7200000){ // If not within two hours, don't bother 
-               var closestTotalYesterday = babySheet.getRange(priorDayRows[index], TOTAL_COL).getDisplayValue();
-               var closestTimeYesterday = dateToTimeString(times[index][0]);
-               // Set the note
-               babySheet.getRange(currentCellRow, TOTAL_COL).setNote("At the closest time yesterday ("+closestTimeYesterday+"), the total feed was "+ closestTotalYesterday + " oz");
-           }else{
-              // No valid match was found, if prior note there, clear it
-              babySheet.getRange(currentCellRow, TOTAL_COL).clearNote();
-           }
-         }else{
-            // No dates were found, if note exists, clear it
-            babySheet.getRange(currentCellRow, TOTAL_COL).clearNote();
+        var priorDaysRows = rowsMatchingDayFromRow(new Date(priorDay.toLocaleDateString()), currentCellRow, babySheet);
+        if (priorDaysRows.length > 0){
+            var times = babySheet.getRange("A"+priorDaysRows[0]+":A"+priorDaysRows[priorDaysRows.length-1]).getValues();
+            var offsets=[];
+            for (var i=0; i<times.length;i++){
+               var iDate = new Date(dateToTimeString(times[i][0]) + " " + priorDay.toLocaleDateString());
+               offsets.push(Math.abs(priorDay.getTime() - iDate.getTime()));
+            }
+            // Find the closest time yesterday to the current feeding time
+            var index = indexOfMin(offsets);
+            if (index != -1){
+               if (offsets[index] < 7200000){ // If not within two hours, don't bother 
+                   var closestTotalYesterday = babySheet.getRange(priorDaysRows[index], TOTAL_COL).getDisplayValue();
+                   var closestTimeYesterday = dateToTimeString(times[index][0]);
+                   // Set the note
+                   babySheet.getRange(currentCellRow, TOTAL_COL).setNote("At the closest time yesterday ("+closestTimeYesterday+"), the total feed was "+ closestTotalYesterday + " oz");
+               }else{
+                  // No valid match was found, if prior note there, clear it
+                  babySheet.getRange(currentCellRow, TOTAL_COL).clearNote();
+               }
+            }else{
+                // No dates were found, if note exists, clear it
+                babySheet.getRange(currentCellRow, TOTAL_COL).clearNote();
+            }
          }
-      }else{
+    }else{
           // Date is invalid, clear out any existing note
           babySheet.getRange(currentCellRow, TOTAL_COL).clearNote();
-      }
+    }
+    
   }
   
   // Did they just hit done on the top row?
