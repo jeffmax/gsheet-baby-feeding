@@ -73,7 +73,7 @@ function onEdit(e) {
   var lastDate;
   
   var instructions = "ENTER -->";
-  var currentCell = e.source.getActiveSelection();
+  var currentCell = e.range;
   var currentCellCol = currentCell.getColumn();
   var currentCellRow = currentCell.getRow();
   var babySheet = e.source.getActiveSheet();
@@ -99,9 +99,19 @@ function onEdit(e) {
       }
   }   
   
+  
+  var doneCell = babySheet.getRange(currentCellRow, DONE_COL);
+  var done = doneCell.getValue();
+  var breast = babySheet.getRange(currentCellRow, BREAST_COL).getValue();
+  var formula = babySheet.getRange(currentCellRow, FORMULA_COL).getValue();
+  var solids = babySheet.getRange(currentCellRow, SOLIDS_COL).getValue();
+  
   // Did they just edit the top row for the first time? 
   // If a row has been inserted manually, rangeWidth will be greater than one
-  if (currentCellRow==EDIT_ROW && e.range.getWidth() == 1 & (startTime.getDisplayValue() == "" || startTime.getDisplayValue() == instructions)){
+  if (currentCellRow==EDIT_ROW &&
+      e.range.getWidth() == 1 &&
+      (startTime.getDisplayValue() == "" || startTime.getDisplayValue() == instructions) &&
+      ((breast != "" || formula != "" || solids !=""))){
       startTime.setValue(dateToTimeString(d));
       inserted_time = true;
       lastDate = babySheet.getRange(PREV_ROW, DAY_COL).getValue();
@@ -110,7 +120,7 @@ function onEdit(e) {
         var yesterdayRow = babySheet.getRange(PREV_ROW,1,1, babySheet.getLastColumn());
         yesterdayRow.setBorder(true, false, false, false, false, false, "black", SpreadsheetApp.BorderStyle.SOLID_MEDIUM);
       }
-  }else if (currentCellRow==EDIT_ROW && e.range.getWidth() > 1 & startTime.getValue() == ""){
+  }else if (currentCellRow==EDIT_ROW && e.range.getWidth() > 1 && startTime.getValue() == ""){
       // If a row was inserted manually at the top, set instructions, eitherwise leave it blank
       startTime.setValue(instructions);
   }
@@ -154,13 +164,9 @@ function onEdit(e) {
   }
   
   // Did they just hit done on the top row?
-  var done = babySheet.getRange(currentCellRow, DONE_COL);
-  var breast = babySheet.getRange(currentCellRow, BREAST_COL).getValue();
-  var formula = babySheet.getRange(currentCellRow, FORMULA_COL).getValue();
+  SpreadsheetApp.flush();
   var timestamp = babySheet.getRange(currentCellRow, START_COL).getValue();
-  var solids = babySheet.getRange(currentCellRow, SOLIDS_COL).getValue();
-  
-  if (currentCellRow==EDIT_ROW && done.getValue() == true && (breast != "" || formula != "" || solids != "") && timestamp != "" && timestamp != instructions){
+  if (currentCellRow == EDIT_ROW && done == true && (breast != "" || formula != "" || solids != "") && timestamp != "" && timestamp != instructions){
     endDateTime.setValue(d.toLocaleString());
     babySheet.getRange(EDIT_ROW, TOTAL_COL).setFontWeight("bold");
     lastDate = babySheet.getRange(PREV_ROW, DAY_COL).getValue();
@@ -171,11 +177,12 @@ function onEdit(e) {
     }
     babySheet.getRange(EDIT_ROW,1,1, babySheet.getLastColumn()).setBackground(DISABLED_ROW_COLOR);
     babySheet.insertRowBefore(EDIT_ROW);
+    SpreadsheetApp.flush();
     babySheet.getRange(EDIT_ROW, START_COL).setValue(instructions);
     babySheet.getRange(EDIT_ROW,1,1,babySheet.getLastColumn()).setBackground("white");
     babySheet.getRange(EDIT_ROW, TOTAL_COL).setFontWeight("normal")
-  }else if (currentCellRow==EDIT_ROW && done.getValue() == true){
-    done.setValue(false);
+  }else if (currentCellRow == EDIT_ROW && done == true){
+    doneCell.setValue(false);
   }
   SpreadsheetApp.flush();
   lock.releaseLock();
