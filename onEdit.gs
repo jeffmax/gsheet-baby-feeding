@@ -2,6 +2,7 @@ var EDIT_ROW = 2;
 var PREV_ROW = 3;
 var BREAST_COL = 2;
 var FORMULA_COL = 3;
+var SOLIDS_COL = 4;
 var START_COL = 1;
 var DONE_COL = 5;
 var TOTAL_COL = 6;
@@ -157,8 +158,9 @@ function onEdit(e) {
   var breast = babySheet.getRange(currentCellRow, BREAST_COL).getValue();
   var formula = babySheet.getRange(currentCellRow, FORMULA_COL).getValue();
   var timestamp = babySheet.getRange(currentCellRow, START_COL).getValue();
+  var solids = babySheet.getRange(currentCellRow, SOLIDS_COL).getValue();
   
-  if (currentCellRow==EDIT_ROW && done.getValue() == true && (breast != "" || formula != "") && timestamp != "" && timestamp != instructions){
+  if (currentCellRow==EDIT_ROW && done.getValue() == true && (breast != "" || formula != "" || solids != "") && timestamp != "" && timestamp != instructions){
     endDateTime.setValue(d.toLocaleString());
     babySheet.getRange(EDIT_ROW, TOTAL_COL).setFontWeight("bold");
     lastDate = babySheet.getRange(PREV_ROW, DAY_COL).getValue();
