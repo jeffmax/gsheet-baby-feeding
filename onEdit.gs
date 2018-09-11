@@ -87,24 +87,23 @@ function onEdit(e) {
     runningTotal.setValue("=SUMIF(INDIRECT(\""+DAY_COL_LETTER+"\"&ROW()&\":"+DAY_COL_LETTER+"\"),INDIRECT(\""+DAY_COL_LETTER+"\"&ROW()),INDIRECT(\"INTERNAL!A\"&ROW()&\":A\"))")
   }
  
-  // Populate the date (handles editing the top row and when someone manually inserts a row)
-  var day = babySheet.getRange(currentCellRow, DAY_COL);
-  if (day.getValue() == ""){
-      if (currentCellRow==EDIT_ROW){
-           day.setValue(d.toLocaleDateString());
-      }else{
-        // Use the date of the cell below. 
-        var belowDate = babySheet.getRange(currentCellRow+1, DAY_COL).getValue();
-        babySheet.getRange(currentCellRow, DAY_COL).setValue(belowDate.toLocaleDateString());
-      }
-  }   
-  
-  
   var doneCell = babySheet.getRange(currentCellRow, DONE_COL);
   var done = doneCell.getValue();
   var breast = babySheet.getRange(currentCellRow, BREAST_COL).getValue();
   var formula = babySheet.getRange(currentCellRow, FORMULA_COL).getValue();
   var solids = babySheet.getRange(currentCellRow, SOLIDS_COL).getValue();
+  
+  // Populate the date (handles editing the top row and when someone manually inserts a row)
+  var day = babySheet.getRange(currentCellRow, DAY_COL);
+  if (day.getValue() == ""){
+      if (currentCellRow == EDIT_ROW && (breast != "" || formula != "" || solids != "")){
+           day.setValue(d.toLocaleDateString());
+      }else if (currentCellRow!=EDIT_ROW){
+        // Use the date of the cell below. 
+        var belowDate = babySheet.getRange(currentCellRow+1, DAY_COL).getValue();
+        babySheet.getRange(currentCellRow, DAY_COL).setValue(belowDate.toLocaleDateString());
+      }
+  }   
   
   // Did they just edit the top row for the first time? 
   // If a row has been inserted manually, rangeWidth will be greater than one
@@ -160,7 +159,6 @@ function onEdit(e) {
           // Date is invalid, clear out any existing note
           babySheet.getRange(currentCellRow, TOTAL_COL).clearNote();
     }
-    
   }
   
   // Did they just hit done on the top row?
