@@ -168,9 +168,9 @@ function onEdit(e) {
     endDateTime.setValue(d.toLocaleString());
     babySheet.getRange(EDIT_ROW, TOTAL_COL).setFontWeight("bold");
     lastDate = babySheet.getRange(PREV_ROW, DAY_COL).getValue();
-    if (lastDate.toLocaleDateString() != d.toLocaleDateString()){
+    if (lastDate != "" && lastDate.toLocaleDateString() != d.toLocaleDateString()){
       babySheet.getRange(PREV_ROW, TOTAL_COL).setFontWeight("bold");
-    }else{
+    }else if (lastDate != "") {
       babySheet.getRange(PREV_ROW, TOTAL_COL).setFontWeight("normal");
     }
     babySheet.getRange(EDIT_ROW,1,1, babySheet.getLastColumn()).setBackground(DISABLED_ROW_COLOR);
